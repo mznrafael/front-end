@@ -14,8 +14,24 @@ export default class Todo extends React.Component {
         this.state = {description: '', list: []}
         this.handlerChange = this.handlerChange.bind(this)
         this.handlerAdd = this.handlerAdd.bind(this)
+        this.handlerRemove = this.handlerRemove.bind(this)
+        this.handlerMarkDone = this.handlerMarkDone.bind(this)
+        this.handlerMarkAsPending = this.handlerMarkAsPending.bind(this)
+        this.handlerSearch = this.handlerSearch.bind(this)
+        this.handlerClear = this.handlerClear.bind(this)
+        this.refresh()
     }
     
+    refresh(description = '') {
+        const search = description ? `&description__regex=/${description}/` : ''
+        axios.get(`${URL}?sort=-createdAt${search}`)
+            .then(res => this.setState({...this.state, description, list: res.data}))
+    }
+
+    handlerSearch() {
+        this.refresh(this.state.description)
+    }
+
     handlerChange(e) {
         this.setState({...this.state, description: e.target.value})
     }
@@ -23,7 +39,25 @@ export default class Todo extends React.Component {
     handlerAdd() {
         const description  = this.state.description
         axios.post(URL, {description})
-            .then(resp => console.log('Funcionou'))
+            .then(resp => this.refresh())
+    }
+
+    handlerRemove(todo) {
+        axios.delete(`${URL}/${todo._id}`)
+            .then(res => this.refresh(this.state.description))
+    }
+
+    handlerMarkDone(todo) {
+        axios.put(`${URL}/${todo._id}`, {...todo, done: true})
+            .then(res => this.refresh(this.state.description))
+    }
+    handlerMarkAsPending(todo) {
+        axios.put(`${URL}/${todo._id}`, { ...todo, done: false})
+            .then(res => this.refresh(this.state.description))
+    }
+
+    handlerClear() {
+        this.refresh()
     }
 
     render() {
@@ -31,11 +65,18 @@ export default class Todo extends React.Component {
             <div>
                 <PageHeader name='Tarefas' small='Cadastro'></PageHeader>
                 <TodoFrom
+                        description={this.state.description}
                         handlerChange={this.handlerChange} 
                         handlerAdd={this.handlerAdd}
-                        description={this.state.description}
+                        handlerSearch={this.handlerSearch}
+                        handlerClear={this.handlerClear}
                     />
-                <TodoList/>
+                <TodoList 
+                        list={this.state.list}
+                        handlerRemove={this.handlerRemove}
+                        handlerMarkDone={this.handlerMarkDone}
+                        handlerMarkAsPending={this.handlerMarkAsPending}
+                        />
             </div>
         )
     }
